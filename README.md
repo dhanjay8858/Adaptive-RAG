@@ -13,18 +13,10 @@ The system intelligently adapts its retrieval strategy based on query type, util
 
 ---
 
-## 🚀 What's New in the Latest Release
-
-- **Persistent Authentication**: Fully implemented secure JWT cookie-based session management. Users remain logged in seamlessly even after browser refreshes, using native Streamlit context.
-- **Infinite Conversational Memory**: Fixed session storage to tie MongoDB chat histories directly to user accounts, meaning the AI perfectly remembers your previous conversations even if you log out and log back in days later!
-- **Context-Aware Query Routing**: The LangGraph router has been upgraded to read your entire chat history before making routing decisions, drastically improving its ability to answer follow-up questions without hallucinating or making unnecessary web searches.
-- **Premium UI Redesign**: Overhauled the Streamlit frontend with a stunning dark-mode dashboard, interactive feature boxes, and custom CSS-styled chat bubbles for a highly polished user experience.
-
----
-
 ## 🎯 Key Features
 
 ### 🧠 Intelligent Query Routing
+- **Context-Aware Query Routing**: The LangGraph router reads your entire chat history before making routing decisions, drastically improving its ability to answer follow-up questions without hallucinating or making unnecessary web searches.
 - **Adaptive Classification**: Automatically routes queries to the most appropriate processing pipeline
 - **Three Query Types**:
   - **Index**: Queries answerable from uploaded documents
@@ -43,17 +35,18 @@ The system intelligently adapts its retrieval strategy based on query type, util
 - **Tool Integration**: Seamless integration with retrieval tools and web search
 
 ### 💾 State & Memory Management
-- **Infinite Conversational Memory**: Permanent chat history tied to the user's account in MongoDB. The AI remembers everything you've ever discussed across all sessions and logins.
+- **Infinite Conversational Memory**: Permanent chat history tied to the user's account in MongoDB. The AI perfectly remembers everything you've ever discussed across all sessions and logins.
 - **Resilient Memory**: Automatic in-memory fallback to ensure uninterrupted chat functionality during database outages or network issues.
-- **Secure Persistent Sessions**: JWT-based browser cookies ensure your authentication survives browser refreshes and tab closures.
+- **Secure Persistent Sessions**: Fully implemented secure JWT cookie-based session management. Users remain logged in seamlessly even after browser refreshes.
 
 ### 🛡️ Fallback Mechanisms & Resilience
+- **Multi-LLM Fallback**: Advanced Multi-LLM routing ensures maximum uptime. If the primary provider (Groq) goes offline or hits rate limits, the system instantly hot-swaps to the fallback provider (Google Gemini), with support for local fallback (Ollama).
 - **Database Fallback (In-Memory)**: If the primary MongoDB cluster goes offline or network latency spikes, the system instantly hot-swaps to an ephemeral `chathistory_in_memory` state to ensure zero downtime for the user's conversation.
 - **Retrieval Fallback (Web Search)**: If the RAG index fails to yield relevant chunks for a document-based query, the LangGraph agent automatically falls back to the Tavily Web Search tool to dynamically pull in the missing context.
 - **Authentication Resilience**: Built-in fault tolerance against third-party React component lifecycle delays by leveraging Streamlit's native `st.context.cookies` for rock-solid, synchronous session hydration on every single render.
 
 ### 🎨 User Interface
-- **Premium Streamlit Web App**: A stunning, modern dark-themed interactive chat interface with custom-styled CSS components.
+- **Premium UI Redesign**: Overhauled the Streamlit frontend with a stunning dark-mode dashboard, interactive feature boxes, and custom CSS-styled chat bubbles for a highly polished user experience.
 - **File Support**: PDF and TXT document uploads directly from the sidebar.
 - **Real-time Feedback**: Live chat with instant, beautiful chat bubbles and typing indicators.
 
@@ -263,16 +256,18 @@ Form Data:
 - Python 3.9 or higher
 - MongoDB (local or cloud)
 - Qdrant vector database
-- OpenAI API key
+- Groq API key (Primary LLM)
+- Google Gemini API key (Fallback LLM)
 - Tavily API key (for web search)
+- Ollama (Optional, for local embeddings and LLM)
 ```
 
 ### 2. Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/dhruvsinghal09/Adaptive-Rag.git
-cd AdaptiveRag
+git clone https://github.com/dhanjay8858/Adaptive-RAG.git
+cd Adaptive-RAG
 
 # Create virtual environment
 python -m venv venv
@@ -287,21 +282,34 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 
 ```env
-# OpenAI Configuration
-OPENAI_API_KEY=your_openai_api_key_here
+# Multi-LLM Provider Architecture Configuration
+PRIMARY_LLM_PROVIDER=Groq
+PRIMARY_MODEL=llama-3.3-70b-versatile
+FALLBACK_MODEL=gemini-2.5-flash
+LOCAL_MODEL=qwen3:8b
+
+# Groq API Key
+GROQ_API_KEY=your_groq_api_key_here
+
+# Google Gemini API Key
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Local Ollama Embeddings & LLM Settings
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_EMBED_MODEL=nomic-embed-text:v1.5
+USE_OLLAMA=true
 
 # Tavily Search Configuration
 TAVILY_API_KEY=your_tavily_api_key_here
 
 # Qdrant Configuration
-QDRANT_URL=http://localhost:6333
+QDRANT_URL=https://your-qdrant-cluster-url
 QDRANT_API_KEY=your_qdrant_api_key
 QDRANT_CODE_COLLECTION=code_documents
 QDRANT_DOCS_COLLECTION=documents
 
 # MongoDB Configuration
-MONGODB_URL=mongodb://localhost:27017
-MONGODB_DB_NAME=adaptive_rag
+MONGODB_URL=mongodb+srv://user:pass@cluster.mongodb.net/adaptive_RAG
 ```
 
 ### 4. Running the Application
@@ -371,7 +379,9 @@ print(response.json())
 #### `config/settings.py`
 ```python
 # Core application settings loaded from environment
-OPENAI_API_KEY           # OpenAI API authentication
+GROQ_API_KEY            # Primary LLM authentication
+GEMINI_API_KEY          # Fallback LLM authentication
+OLLAMA_BASE_URL         # Local embeddings/LLM endpoint
 TAVILY_API_KEY          # Web search functionality
 QDRANT_URL              # Vector database endpoint
 QDRANT_API_KEY          # Vector database authentication
@@ -502,18 +512,18 @@ Contributions are welcome! Please follow these steps:
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
+| **Primary LLM** | Groq (Llama 3.3) | Latest |
+| **Fallback LLM** | Google Gemini (2.5 Flash) | Latest |
+| **Local LLM/Embed** | Ollama | Latest |
 | **LLM Framework** | LangChain | ~0.3.27 |
 | **Workflow Orchestration** | LangGraph | ~0.5.4 |
 | **Web Framework** | FastAPI | Latest |
 | **ASGI Server** | Uvicorn | Latest |
 | **UI Framework** | Streamlit | Latest |
-| **Vector Database** | Qdrant/FAISS | Latest |
+| **Vector Database** | Qdrant | Latest |
 | **Chat Database** | MongoDB/InMemory | Latest |
-| **Document Processing** | LangChain Community | ~0.3.27 |
-| **LLM Provider** | OpenAI | ~0.3.28 |
 | **Web Search** | Tavily | Latest |
 | **Async DB** | Motor | Latest |
-| **Data Validation** | Pydantic | ~2.11.7 |
 
 ---
 
@@ -536,7 +546,7 @@ A: Upload one document at a time through the Streamlit interface. Each upload cr
 A: Limited by system memory and Qdrant storage. Typical limit is 100MB per file.
 
 **Q: Can I use different LLM providers?**  
-A: Currently configured for OpenAI. You can modify `src/llms/openai.py` to use other providers.
+A: The system is pre-configured with a robust Multi-LLM architecture featuring Groq (Primary), Gemini (Fallback), and Ollama (Local). You can easily modify the `.env` file to switch models or add new providers via LangChain integrations.
 
 **Q: How is conversation history stored?**  
 A: MongoDB stores all chat messages with timestamps and session IDs for full context retention.
@@ -559,7 +569,7 @@ For issues, questions, or suggestions:
 
 - Built with LangChain and LangGraph
 - Vector search powered by Qdrant
-- LLM capabilities by OpenAI
+- LLM capabilities powered by Groq, Google Gemini, and Ollama
 - Web search by Tavily
 - UI powered by Streamlit
 - Thanks to the open-source community
