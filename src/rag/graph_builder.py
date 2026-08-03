@@ -40,8 +40,8 @@ def query_classifier(state: State):
         history_lines.append(f"{role}: {msg.content}")
     history_str = "\n".join(history_lines) if history_lines else "No previous history."
     
-    retriever = get_retriever()
     try:
+        retriever = get_retriever()
         context = retriever.invoke(question)
         print("docs received from Qdrant")
         print(context)
@@ -100,23 +100,27 @@ def retriever_node(state: State):
         dict: Updated messages with tool calls.
     """
     messages = state["latest_query"]
-    agent_executor = get_agent_executor()
-    result = agent_executor.invoke({"input": messages})
+    try:
+        agent_executor = get_agent_executor()
+        result = agent_executor.invoke({"input": messages})
 
-    # Extract tool calls
-    intermediate_steps = result.get("intermediate_steps", [])
-    tool_calls = []
-    if intermediate_steps:
-        for action, tool_result in intermediate_steps:
-            tool_calls.append({
-                "tool": action.tool,
-                "input": action.tool_input,
-            })
+        # Extract tool calls
+        intermediate_steps = result.get("intermediate_steps", [])
+        tool_calls = []
+        if intermediate_steps:
+            for action, tool_result in intermediate_steps:
+                tool_calls.append({
+                    "tool": action.tool,
+                    "input": action.tool_input,
+                })
 
-    new_message = AIMessage(
-        content=result["output"],
-        additional_kwargs={"tool_calls": tool_calls},
-    )
+        new_message = AIMessage(
+            content=result["output"],
+            additional_kwargs={"tool_calls": tool_calls},
+        )
+    except Exception as e:
+        print(f"Error in retriever_node (likely embedding failure): {e}")
+        new_message = AIMessage(content="I'm sorry, I cannot access your documents right now because my AI engines are unavailable.")
 
     return {
         "messages": [new_message]
@@ -169,6 +173,8 @@ def rewrite_query(state: State):
         template=config.prompt("rewrite_prompt"),
         input_variables=["query"]
     )
+    chain = rewrite_prompt | llm
+    
     try:
         result = chain.invoke({"query": query})
         print(result)
@@ -198,6 +204,7 @@ def generate(state: State):
         template=config.prompt("generate_prompt"),
         input_variables=["context"]
     )
+    generate_chain = generate_prompt | llm
 
     try:
         result = generate_chain.invoke({"context": context})
