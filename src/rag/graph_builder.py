@@ -202,9 +202,13 @@ def web_search(state: State):
             contents = [str(result)]
     except Exception as e:
         print(f"Tavily search failed: {e}. Falling back to DuckDuckGo.")
-        search_tool = DuckDuckGoSearchRun()
-        result = search_tool.invoke(state["latest_query"])
-        contents = [str(result)]
+        try:
+            search_tool = DuckDuckGoSearchRun()
+            result = search_tool.invoke(state["latest_query"])
+            contents = [str(result)]
+        except Exception as e2:
+            print(f"DuckDuckGo search failed: {e2}")
+            contents = ["I'm sorry, I couldn't search the web right now. Both Tavily and DuckDuckGo search services are currently unavailable or rate-limited. Please try again later."]
         
     print(contents)
 
