@@ -55,11 +55,16 @@ def query_classifier(state: State):
         input_variables=["question", "context", "history"]
     )
     chain = classify_prompt | llm_with_structured_output
-    result = chain.invoke({"question": question, "context": context, "history": history_str})
-    print("result received is in query classifier")
-    print(result.route)
+    try:
+        result = chain.invoke({"question": question, "context": context, "history": history_str})
+        route_decision = result.route
+        print("result received is in query classifier")
+        print(route_decision)
+    except Exception as e:
+        print(f"All LLMs failed during classification: {e}")
+        route_decision = "general" # Default to general if router fails
 
-    return {"messages": state["messages"], "route": result.route, "latest_query": question}
+    return {"messages": state["messages"], "route": route_decision, "latest_query": question}
 
 
 def general_llm(state: State):
@@ -72,9 +77,15 @@ def general_llm(state: State):
     Returns:
         dict: Updated messages from LLM.
     """
-    result = llm.invoke(state["messages"])
-    print("inside general llm")
-    print(result)
+    try:
+        result = llm.invoke(state["messages"])
+        print("inside general llm")
+        print(result)
+    except Exception as e:
+        print(f"All LLMs failed in general_llm: {e}")
+        from langchain_core.messages import AIMessage
+        result = AIMessage(content="I'm sorry, my AI engines are currently unavailable. Please verify your API keys (Groq/Gemini) in your environment variables.")
+
     return {"messages": result}
 
 
@@ -132,10 +143,15 @@ def grade(state: State):
     llm_with_grade = get_structured_llm(Grade)
 
     chain_graded = grading_prompt | llm_with_grade
-    result = chain_graded.invoke({"question": question, "context": context})
+    try:
+        result = chain_graded.invoke({"question": question, "context": context})
+        print(result)
+        score = result.binary_score
+    except Exception as e:
+        print(f"All LLMs failed in grade: {e}")
+        score = "no" # Default to no if grading fails
 
-    print(result)
-    return {"messages": state["messages"], "binary_score": result.binary_score}
+    return {"messages": state["messages"], "binary_score": score}
 
 
 def rewrite_query(state: State):
@@ -153,12 +169,16 @@ def rewrite_query(state: State):
         template=config.prompt("rewrite_prompt"),
         input_variables=["query"]
     )
-    chain = rewrite_prompt | llm
-    result = chain.invoke({"query": query})
-    print(result)
+    try:
+        result = chain.invoke({"query": query})
+        print(result)
+        new_query = result.content
+    except Exception as e:
+        print(f"All LLMs failed in rewrite_query: {e}")
+        new_query = query # fallback to original query
 
     return {
-        "latest_query": result.content
+        "latest_query": new_query
     }
 
 
@@ -179,10 +199,14 @@ def generate(state: State):
         input_variables=["context"]
     )
 
-    generate_chain = generate_prompt | llm
-    result = generate_chain.invoke({"context": context})
+    try:
+        result = generate_chain.invoke({"context": context})
+        content = result.content
+    except Exception as e:
+        print(f"All LLMs failed in generate: {e}")
+        content = "I'm sorry, my AI engines are currently unavailable. Please verify your API keys (Groq/Gemini) in your environment variables."
 
-    return {"messages": [{"role": "assistant", "content": result.content}]}
+    return {"messages": [{"role": "assistant", "content": content}]}
 
 
 def web_search(state: State):
