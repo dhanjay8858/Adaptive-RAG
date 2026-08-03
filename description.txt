@@ -1,0 +1,1 @@
+Tool Instruction: This retriever tool is designed to answer questions specifically about the uploaded certificate of a student. Please use this tool to ask questions related to the content of the certificate, and it will provide relevant information based on the uploaded document.
