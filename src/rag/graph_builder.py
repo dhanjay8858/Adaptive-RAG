@@ -41,9 +41,13 @@ def query_classifier(state: State):
     history_str = "\n".join(history_lines) if history_lines else "No previous history."
     
     retriever = get_retriever()
-    context = retriever.invoke(question)
-    print("docs received from Qdrant")
-    print(context)
+    try:
+        context = retriever.invoke(question)
+        print("docs received from Qdrant")
+        print(context)
+    except Exception as e:
+        print(f"Error fetching context for classification (likely embedding failure): {e}")
+        context = []
 
     llm_with_structured_output = get_structured_llm(RouteIdentifier)
     classify_prompt = PromptTemplate(
