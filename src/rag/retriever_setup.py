@@ -7,15 +7,26 @@ import os
 from langchain_core.documents import Document
 from langchain_core.tools import create_retriever_tool
 from langchain_ollama import OllamaEmbeddings
-# from langchain_qdrant import QdrantVectorStore
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import FAISS
+import requests
 
 from src.core.config import settings
 
-embeddings = OllamaEmbeddings(
-    model=settings.OLLAMA_EMBED_MODEL, 
-    base_url=settings.OLLAMA_BASE_URL
-)
+try:
+    if settings.USE_OLLAMA == 'true':
+        # Quickly check if Ollama is reachable
+        requests.get(settings.OLLAMA_BASE_URL, timeout=1)
+        embeddings = OllamaEmbeddings(
+            model=settings.OLLAMA_EMBED_MODEL, 
+            base_url=settings.OLLAMA_BASE_URL
+        )
+        print("Using Ollama for embeddings")
+    else:
+        raise ValueError("Ollama disabled")
+except Exception as e:
+    print(f"Falling back to Gemini embeddings: {e}")
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
 
 # Global variable to store the FAISS vectorstore instance
 # This ensures get_retriever() can access documents stored by retriever_chain()
