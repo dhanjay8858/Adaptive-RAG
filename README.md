@@ -47,6 +47,11 @@ The system intelligently adapts its retrieval strategy based on query type, util
 - **Resilient Memory**: Automatic in-memory fallback to ensure uninterrupted chat functionality during database outages or network issues.
 - **Secure Persistent Sessions**: JWT-based browser cookies ensure your authentication survives browser refreshes and tab closures.
 
+### 🛡️ Fallback Mechanisms & Resilience
+- **Database Fallback (In-Memory)**: If the primary MongoDB cluster goes offline or network latency spikes, the system instantly hot-swaps to an ephemeral `chathistory_in_memory` state to ensure zero downtime for the user's conversation.
+- **Retrieval Fallback (Web Search)**: If the RAG index fails to yield relevant chunks for a document-based query, the LangGraph agent automatically falls back to the Tavily Web Search tool to dynamically pull in the missing context.
+- **Authentication Resilience**: Built-in fault tolerance against third-party React component lifecycle delays by leveraging Streamlit's native `st.context.cookies` for rock-solid, synchronous session hydration on every single render.
+
 ### 🎨 User Interface
 - **Premium Streamlit Web App**: A stunning, modern dark-themed interactive chat interface with custom-styled CSS components.
 - **File Support**: PDF and TXT document uploads directly from the sidebar.
