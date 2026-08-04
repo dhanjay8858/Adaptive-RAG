@@ -26,7 +26,7 @@ try:
         raise ValueError("Ollama disabled")
 except Exception as e:
     print(f"Falling back to Gemini embeddings: {e}")
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-2")
 
 # Global variable to store the FAISS vectorstore instance
 # This ensures get_retriever() can access documents stored by retriever_chain()
