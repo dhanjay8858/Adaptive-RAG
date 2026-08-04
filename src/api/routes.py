@@ -100,5 +100,8 @@ async def upload_file(
         Upload status.
     """
     status_upload = documents(description, file)
+    if not status_upload:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail="Failed to embed and store document. Please check your embedding API keys.")
     return {"status": status_upload}
 
