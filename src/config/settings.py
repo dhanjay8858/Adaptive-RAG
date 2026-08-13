@@ -37,4 +37,12 @@ class Config:
         Returns:
             The prompt template string.
         """
-        return self.config["prompts"][key]
+        prompt_text = self.config["prompts"][key]
+        
+        # Inject current date and time to help LLM avoid hallucinations
+        if key in ["classify_prompt", "generate_prompt", "system_prompt"]:
+            from datetime import datetime
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            prompt_text += f"\n\n[System Note: The current system date and time is {current_time}]"
+            
+        return prompt_text

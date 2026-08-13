@@ -58,6 +58,13 @@ def query_classifier(state: State):
     try:
         result = chain.invoke({"question": question, "context": context, "history": history_str})
         route_decision = result.route
+        
+        # Hardcode override for time/date queries to bypass stale web search cache
+        lower_q = question.lower()
+        if ("time" in lower_q or "date" in lower_q or "day" in lower_q) and ("now" in lower_q or "current" in lower_q or "today" in lower_q):
+            print("Time query detected, forcing 'general' route.")
+            route_decision = "general"
+            
         print("result received is in query classifier")
         print(route_decision)
     except Exception as e:
@@ -78,7 +85,13 @@ def general_llm(state: State):
         dict: Updated messages from LLM.
     """
     try:
-        result = llm.invoke(state["messages"])
+        from langchain_core.messages import SystemMessage
+        from datetime import datetime
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        sys_msg = SystemMessage(content=f"You are a helpful AI assistant. You have real-time access to the current date and time because the system provides it to you. The current system date and time is {current_time}. You MUST use this information to confidently answer the user's question about the time or date. DO NOT claim that you are a language model without real-time access.")
+        
+        msgs = [sys_msg] + state["messages"]
+        result = llm.invoke(msgs)
         print("inside general llm")
         print(result)
     except Exception as e:
@@ -245,7 +258,6 @@ def web_search(state: State):
             print(f"DuckDuckGo search failed: {e2}")
             contents = ["I'm sorry, I couldn't search the web right now. Both Tavily and DuckDuckGo search services are currently unavailable or rate-limited. Please try again later."]
         
-    print(contents)
 
     return {
         "messages": [{"role": "assistant", "content": "\n\n".join(contents)}]
